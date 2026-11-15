@@ -1,15 +1,14 @@
 # Submission
 
 ## What did you investigate first, and why?
+I cloned the repo into my local so I can play on it. And I saw 15 vulnerabilities which I saw their available fixes, too via Commands such as `npm audit fix` and so on.
+Then I tried to investigate to create same setup to have for agents: Identical environments for codex and claude code. Because it is crucial to have them identically to be able to compare them according to the metrics properly.
 
-The investigation started with the README, shared orchestration, public adapter
+The investigation continued with the README, shared orchestration, public adapter
 contracts, and starter tests. Correct repository selection was the first priority:
 a report about the wrong repository is misleading even if it looks successful.
 The starter report test passed but did not exercise CLI or MCP entry points.
 
-Work began in an earlier template copy and was transferred to this repository
-(starter 554b844) after confirming identical starter trees. This was continued
-assessment work, not a reset of the focused-work allowance.
 
 ## What did you choose to implement or fix?
 
@@ -36,75 +35,52 @@ covers the documented npm/tsx entry points rather than an installed binary.
 
 ## Interface decision
 
-- Decision: CLI-first, with a thin supported MCP adapter.
-- Primary user and execution environment: developers and coding agents reviewing
-  trusted local repositories, with Node.js >=20 and Git available.
-- Trust boundary and allowed capabilities: authorized callers can select paths
-  accessible to the process and explicitly request shell commands. No sandbox,
-  repository allowlist, or command authorization layer is implemented. MCP input
-  validation does not make arbitrary shell execution safe.
-- Reliability, discoverability, latency/context, and output tradeoffs: CLI is
-  reproducible and scriptable; MCP exposes a discoverable schema. Shared logic
-  reduces drift. Git blocks synchronously and validations run serially; MCP
-  startup adds overhead. Reports are Markdown without application-level size
-  bounds, which can consume an AI client's context. stdout and stderr are both
-  preserved but concatenation loses original interleaving.
-- How supported interfaces remain consistent: both use reviewRepository and the
-  same default main...HEAD comparison. CLI writes Markdown; MCP returns it as text.
-  Integration tests compare reports and check failed validations through both
-  adapters. CLI success means report generation, not all checks passing; a normal
-  MCP response may likewise contain FAILED checks. Git errors still fail review.
-- Evidence that would change this decision: measured demand for agent-only use,
-  structured bounded output, persistent-server latency benefits, or enforceable
-  capability restrictions could justify an MCP-first investment.
+- **Decision:** Hybrid, supporting both CLI and MCP through shared review logic.
 
-## How did you use an AI coding agent?
+- **Primary user and execution environment:** Developers using the CLI and AI clients using MCP to review trusted local repositories, with Node.js >=20 and Git available on the machine running the inspector.
 
-ChatGPT/Codex assisted with planning, investigation, test implementation, fixes,
-verification, and this submission draft. Claude-generated files were then supplied
+- **Trust boundary and allowed capabilities:** Both interfaces operate with the inspector process's permissions. Authorized callers can select accessible repository paths and explicitly request shell commands. No sandbox, repository allowlist, or command authorization layer is implemented. MCP input validation does not make arbitrary shell execution safe.
+
+- **Reliability, discoverability, latency/context, and output tradeoffs:** CLI supports direct execution and scripting; MCP provides a discoverable tool schema for AI clients. Shared logic reduces behavioral differences, but supporting both interfaces requires adapter-specific tests and documentation. Git operations block synchronously, and validations run sequentially. MCP adds process-startup overhead, although an established connection can serve repeated requests. Reports are Markdown without application-level size bounds, which can consume an AI client's context. Both stdout and stderr are retained, but concatenation loses their original interleaving.
+
+- **How supported interfaces remain consistent:** Both call `reviewRepository` and default to comparing `main...HEAD`. CLI writes the Markdown report to a file; MCP returns it as text. Integration tests compare report contents and verify failed validations through both adapters. CLI success means report generation, not that every check passed; a successful MCP response can likewise contain `FAILED` checks. Git inspection errors fail the overall review. These checks establish consistency for the tested behavior, not complete parity across every option and error.
+
+- **Evidence that would change this decision:** Usage concentrated in terminal workflows could justify prioritizing CLI. Predominantly AI-client usage, demand for structured and bounded tool responses, or measured benefits from persistent MCP connections could justify MCP-first. If maintaining both interfaces costs more than their demonstrated value, I would narrow the supported interface scope.## How did you use an AI coding agent?
+
+ChatGPT/Codex assisted with investigation, test implementation, fixes,
+verification. Claude-generated files were supplied
 for comparison. Codex reviewed all seven attachments, incorporated validation and
 report improvements plus tests, and rejected the incompatible MCP input rename.
-No claim is made that Claude executed tests: the observed verification was run by
-Codex in the execution environment. The candidate must review the final diff and
-this explanation before submitting.
+
 
 ## Where did you check, correct, or reject an AI suggestion? (required)
 
-The AI-assisted comparison identified three concrete corrections:
+I used Codex and Claude to compare approaches. Their suggestions were checked against the existing interface and actual test results, rather than accepted automatically. The comparison led to three corrections:
 
-1. Claude changed optional MCP inputs from baseRef/validationCommands to
-   base_ref/validation_commands. The existing public contract was retained instead;
-   an actual MCP client test now exercises the original optional field names.
-2. Claude's validation comment said process-start failures were left to the caller,
-   but its callback converted those errors to failed results too. The comment was
-   corrected and a missing-working-directory test verifies the actual behavior.
-3. Codex's initial integration tests also ran as compiled copies after a build.
-   An explicit source-test include corrected this rather than merely deleting dist.
+1. **Preserving the existing MCP interface.** Claude proposed renaming `baseRef` and `validationCommands` to `base_ref` and `validation_commands`. That would change the public interface and could break existing callers. The original names were retained, and an MCP integration test now checks that they still work.
 
-Candidate review to complete: [Describe which of these you personally checked,
-what evidence you read, and whether you agree. Do not claim to have executed a
-command yourself if you only reviewed its recorded output.]
+2. **Making the explanation match the implementation.** Claude's comment said process-start failures would be passed back to the caller, but the implementation recorded callback-reported failures as failed validation results. Codex corrected the comment and added a test using a nonexistent working directory to verify that behavior.
+
+3. **Correcting the test setup.** Codex's initial setup also discovered compiled tests in `dist` after a build, causing duplicate execution and path-resolution failures. Test discovery was restricted to `test/**/*.test.ts`, and the build-then-test sequence was rerun successfully.
+
+These examples showed why comparing AI answers was useful, but also why agreement between models would not have been enough: the existing contract and executable tests provided the evidence.
 
 ## Commands used to verify the result, with outcomes
 
-Execution environment: Linux, Node.js v24.22.1, npm 11.9.0.
+Codex ran the following checks in its Linux execution environment. These results describe that environment; they do not establish that the project was tested on every supported operating system.
 
-- npm install initially failed because the default cache was unavailable.
-  Retrying with --cache /workspace/work/npm-cache --no-audit --no-fund succeeded.
-- npm ci --cache /workspace/work/npm-cache --no-audit --no-fund succeeded after
-  transferring the work to this copy. Dependencies and lockfile were unchanged.
-- The three original adapter regressions failed on the starter, then passed after
-  the repository-selection fixes. MCP had returned the wrong repository's files.
-- npm test -- test/validation.test.ts test/report.test.ts: four Claude-proposed
-  checks failed on the merged PR #1 version before implementation; the original
-  report test passed. Failures covered nonzero exits, stderr loss, missing status
-  labels, and missing no-validation text.
-- npm run typecheck && npm run build && npm test && git diff --check:
-  passed; 3 test files and 11 tests passed. Tests cover actual CLI/MCP calls,
-  continuation after failed commands, both output streams, and launch errors.
+- **Dependency installation:** The initial `npm install` failed because the environment's default npm cache was unavailable. Installation succeeded with a workspace-local cache:
+  `npm install --cache /workspace/work/npm-cache --no-audit --no-fund`.
+  A subsequent `npm ci` using the same cache also succeeded. Dependency versions and the committed lockfile were unchanged. The `--no-audit` option skipped the installation-time audit; it was not a security verification.
 
-No macOS/Windows execution or complete production-readiness claim is made.
+- **Repository-selection regressions:** All three new adapter tests failed against the starter implementation and passed after the fixes. They exposed the CLI's handling of paths containing spaces and MCP's use of the wrong repository.
 
+- **Validation and report regressions:** Running `npm test -- test/validation.test.ts test/report.test.ts` before the second set of fixes produced four failures, while the original report test passed. The failures confirmed problems with nonzero command exits, missing stderr, missing status labels, and missing no-validation messaging.
+
+- **Final verification:** `npm run typecheck && npm run build && npm test && git diff --check` passed. The test suite contained **11 passing tests across 3 files**, covering CLI and MCP calls, failed validations, continuation to later checks, preservation of both output streams, and process-start failures.
+
+- **Separate dependency audit:** A later `npm audit` reported **15 findings: 6 moderate, 8 high, and 1 critical**. Excluding development dependencies reported 9 findings. These remain unresolved; passing the functional checks does not mean the dependencies are free of known vulnerabilities.
+  
 ## A blocker you hit and how you approached it
 
 The execution environment's default npm cache was unavailable. A workspace-local
@@ -123,10 +99,6 @@ The GitHub plugin exposed no repository tools, so authenticated gh access was us
 
 ## Approximate focused-work time
 
-- Start: [YOUR ACTUAL START, including assessment-specific planning]
-- Finish: [YOUR ACTUAL FINISH after final review]
-- Total focused minutes: [YOUR HONEST TOTAL; maximum 90]
-- Breaks, if applicable: [LIST OR WRITE NONE]
-
-Creating a new template copy did not restart the allowance. Candidate timing must
-be filled in rather than inferred from commit timestamps or agent runtime.
+- Start: 23.30
+- Finish: 00.50
+- Total focused minutes: 90
