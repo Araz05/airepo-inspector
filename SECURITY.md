@@ -11,8 +11,8 @@ candidates can never see it.
 
 ## When you're ready to submit
 
-Click **Security** → **Report a vulnerability** on this repo (or [use this
-link](../../security/advisories/new)) and fill in:
+Click **Security** → **Report a vulnerability** on the original assessment repository (or [use this
+link](https://github.com/JavadManashti/ai-repo-inspector/security/advisories/new)) and fill in:
 
 - **Title**: your name and Lever candidate/opportunity ID if you have it
   (e.g. `Jane Doe — assessment submission`)
