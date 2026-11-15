@@ -78,6 +78,50 @@ src/report.ts       Markdown report generation
 test/               public starter tests
 ```
 
-When finished, submit via **Security → Report a vulnerability** on this
-repo — see `SECURITY.md` for exactly what to include. Do not reply by email;
+When finished, submit via **Security → Report a vulnerability** on the [original assessment repository](https://github.com/JavadManashti/ai-repo-inspector/security/advisories/new) — see `SECURITY.md` for exactly what to include. Do not reply by email;
 that submission channel is not monitored.
+
+## Implementation scope and supported use
+
+This iteration is **CLI-first** for developers and coding agents inspecting
+trusted local Git repositories. MCP remains a thin adapter to the same core.
+Both adapters now preserve the caller's repository selection; integration tests
+invoke the CLI and the real stdio MCP tool from a different Git repository.
+
+Quote CLI paths containing spaces:
+
+```bash
+npm run inspector -- review --repo "./my project" --format markdown
+```
+
+The MCP tool accepts `repo_path` (required string), `baseRef` (optional string),
+and `validationCommands` (optional array of strings). Example arguments:
+
+```json
+{"repo_path": "/work/my project", "baseRef": "main"}
+```
+
+Paths are resolved on the machine running the inspector, relative to its working
+directory when not absolute. CLI writes `review-report.md` in its working
+directory; MCP returns the same Markdown as text content. Git inspection compares
+committed changes using `baseRef...HEAD` (default `main`); it does not include
+uncommitted or untracked files. An empty report on `main` can be expected.
+
+Validation commands run through a shell with the inspector process's permissions.
+Only authorized callers and trusted repository commands are supported: this tool
+is not a sandbox, has no repository allowlist, and has no explicit command timeout.
+Do not expose this MCP server to untrusted callers. JSON output is not implemented,
+even though the existing argument/type accepts it. Validation failure reporting,
+output bounds, and robust Git filename/rename handling remain deferred.
+
+Verification requires Git on PATH and Node.js >=20. Run:
+
+```bash
+npm run typecheck
+npm run build
+npm test
+```
+
+Vitest is restricted to `test/**/*.test.ts`, so building before testing does not
+rerun compiled copies from `dist`. The adapter tests use temporary repositories
+and shut down the MCP subprocesses after each call sequence.
