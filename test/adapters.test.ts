@@ -67,6 +67,25 @@ function expectRequestedReport(report: string) {
 }
 
 describe("repository selection through public adapters", () => {
+  it("MCP preserves existing optional field names and reports failed checks", async () => {
+    await withClient(async (client) => {
+      const result = await client.callTool({
+        name: "review_repository",
+        arguments: { repo_path: target, baseRef: "HEAD~1", validationCommands: ["exit 3", "echo after"] },
+      });
+      expect(result.isError).not.toBe(true);
+      const content = result.content as Array<{ type: string; text?: string }>;
+      const report = content.filter(item => item.type === "text").map(item => item.text).join("\n");
+      expectRequestedReport(report);
+      expect(report).toContain("### exit 3 — FAILED");
+      expect(report).toContain("### echo after — PASSED");
+      const invalidBase = await client.callTool({
+        name: "review_repository", arguments: { repo_path: target, baseRef: "missing-ref" },
+      });
+      expect(invalidBase.isError).toBe(true);
+    });
+  }, 15_000);
+
   it("CLI writes a report when a validation fails and continues later checks", () => {
     const result = spawnSync(process.execPath, [tsx, join(project, "src/cli.ts"),
       "review", "--repo", target, "--validate", "exit 3", "--validate", "echo after"], {
