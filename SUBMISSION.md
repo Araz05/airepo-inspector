@@ -45,7 +45,9 @@ covers the documented npm/tsx entry points rather than an installed binary.
 
 - **How supported interfaces remain consistent:** Both call `reviewRepository` and default to comparing `main...HEAD`. CLI writes the Markdown report to a file; MCP returns it as text. Integration tests compare report contents and verify failed validations through both adapters. CLI success means report generation, not that every check passed; a successful MCP response can likewise contain `FAILED` checks. Git inspection errors fail the overall review. These checks establish consistency for the tested behavior, not complete parity across every option and error.
 
-- **Evidence that would change this decision:** Usage concentrated in terminal workflows could justify prioritizing CLI. Predominantly AI-client usage, demand for structured and bounded tool responses, or measured benefits from persistent MCP connections could justify MCP-first. If maintaining both interfaces costs more than their demonstrated value, I would narrow the supported interface scope.## How did you use an AI coding agent?
+- **Evidence that would change this decision:** Usage concentrated in terminal workflows could justify prioritizing CLI. Predominantly AI-client usage, demand for structured and bounded tool responses, or measured benefits from persistent MCP connections could justify MCP-first. If maintaining both interfaces costs more than their demonstrated value, I would narrow the supported interface scope.
+
+## How did you use an AI coding agent?
 
 ChatGPT/Codex assisted with investigation, test implementation, fixes,
 verification. Claude-generated files were supplied
@@ -100,5 +102,5 @@ The GitHub plugin exposed no repository tools, so authenticated gh access was us
 ## Approximate focused-work time
 
 - Start: 23.30
-- Finish: 00.50
-- Total focused minutes: 90
+- Finish: 00.42
+- Total focused minutes: 72
