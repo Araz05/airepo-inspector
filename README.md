@@ -111,8 +111,8 @@ Validation commands run through a shell with the inspector process's permissions
 Only authorized callers and trusted repository commands are supported: this tool
 is not a sandbox, has no repository allowlist, and has no explicit command timeout.
 Do not expose this MCP server to untrusted callers. JSON output is not implemented,
-even though the existing argument/type accepts it. Validation failure reporting,
-output bounds, and robust Git filename/rename handling remain deferred.
+even though the existing argument/type accepts it. Output bounds and robust
+Git filename/rename handling remain deferred.
 
 Verification requires Git on PATH and Node.js >=20. Run:
 
@@ -125,3 +125,18 @@ npm test
 Vitest is restricted to `test/**/*.test.ts`, so building before testing does not
 rerun compiled copies from `dist`. The adapter tests use temporary repositories
 and shut down the MCP subprocesses after each call sequence.
+
+
+### Validation results
+
+Non-zero command exits and callback-reported process-start failures are included
+as `FAILED` results; later validation commands still run. Reports show `PASSED`
+or `FAILED`, and explicitly say when no validations ran. Both stdout and stderr
+are retained, concatenated in that order (their original interleaving is lost).
+Synchronous invalid-argument errors can still reject the operation.
+
+CLI exit code 0 means the report was generated; it does **not** mean every
+validation passed. Similarly, a successful MCP tool response can contain failed
+validation results. Inspect the report's status labels. Git inspection failures
+still fail the overall review. Execution timeout, process-tree cleanup, and
+application-level output limits remain outside this assessment scope.

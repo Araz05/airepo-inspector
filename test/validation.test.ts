@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { runValidations } from "../src/validation.js";
 
 describe("runValidations", () => {
+  it("reports a process-start failure as a failed result", async () => {
+    const root = mkdtempSync(join(tmpdir(), "validation-cwd-"));
+    try {
+      const results = await runValidations(["echo unused"], join(root, "missing"));
+      expect(results[0]?.status).toBe("failed");
+      expect(results[0]?.output).toContain("ENOENT");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("reports a failing command instead of throwing, and keeps going", async () => {
     const results = await runValidations(["exit 3", "echo after"], process.cwd());
 
@@ -13,7 +27,7 @@ describe("runValidations", () => {
   });
 
   it("keeps both stdout and stderr", async () => {
-    const [result] = await runValidations(["echo out; echo err 1>&2"], process.cwd());
+    const [result] = await runValidations([`"${process.execPath}" -e "console.log('out'); console.error('err')"`], process.cwd());
 
     expect(result?.status).toBe("passed");
     expect(result?.output).toContain("out");

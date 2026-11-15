@@ -12,8 +12,12 @@ export function markdownReport(input: ReportInput): string {
     lines.push(`- ${file.path} (${file.status})`);
   }
   lines.push("", "## Validation output");
+  if (input.validationResults.length === 0) {
+    lines.push("_No validation commands were run._");
+  }
   for (const result of input.validationResults) {
-    lines.push(`### ${result.command}`, "```", result.output, "```");
+    const label = result.status === "passed" ? "PASSED" : "FAILED";
+    lines.push(`### ${result.command} — ${label}`, "```", result.output, "```");
   }
   return lines.join("\n");
 }
